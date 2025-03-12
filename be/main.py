@@ -62,14 +62,12 @@ def get_data():
         key=os.path.getctime, reverse=True
     )
 
-    print("📂 Danh sách file trong thư mục uploads:", file_paths)
 
     if len(file_paths) < 2:
         return jsonify({"error": "Không đủ file để hiển thị!"}), 400
 
     dfs = [pd.read_excel(file_paths[0], dtype=str).fillna(""), pd.read_excel(file_paths[1], dtype=str).fillna("")]
 
-    print("📂 Đang gửi về 2 file mới nhất:", os.path.basename(file_paths[0]), os.path.basename(file_paths[1]))
 
     return jsonify({
         "file1": dfs[0].to_dict(orient="records"),
