@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>So Sánh Dữ Liệu Sinh Viên</title>
+    <link rel="shortcut icon" href="https://media.loveitopcdn.com/3807/logo-hutech-2.png" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+</head>
+<body>
+    <h1>Danh Sách Sinh Viên</h1>
+
+    <!-- Form Upload -->
+    <form id="uploadForm">
+        <label>Chọn file Excel (Tối thiểu 2, tối đa 5):</label>
+        <input type="file" id="files" multiple accept=".xlsx"><br>
+        <div id="fileNames"></div> <!-- Thêm div này để hiển thị danh sách file -->
+        <button type="submit">Tải Lên</button>
+    </form>
+
+    <div class="container">
+        <div class="table-container">
+            <h2>Danh sách từ <span id="file1Name">File 1</span></h2>
+            <table id="table1" class="display">
+                <thead>
+                    <tr><th>MSSV</th><th>Họ Tên</th><th>Lớp</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    
+        <div class="table-container">
+            <h2>Danh sách từ <span id="file2Name">File 2</span></h2>
+            <table id="table2" class="display">
+                <thead>
+                    <tr><th>MSSV</th><th>Họ Tên</th><th>Lớp</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <button onclick="compareData()">So Sánh</button>
+    
+    <h2>Kết Quả So Sánh</h2>
+    <table id="errorTable" class="display">
+        <thead>
+            <tr>
+                <th>MSSV</th>
+                <th>Họ Tên (<span id="file1ErrorNameCompare">File 1</span>)</th>
+                <th>Lớp (<span id="file1ErrorClassCompare">File 1</span>)</th>
+                <th>Họ Tên (<span id="file2ErrorNameCompare">File 2</span>)</th>
+                <th>Lớp (<span id="file2ErrorClassCompare">File 2</span>)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
