@@ -31,7 +31,7 @@ def serve_static_files(filename):
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
-    """Nhận file từ người dùng và lưu lại"""
+    """Xóa file cũ và nhận file mới từ người dùng"""
     if 'files' not in request.files:
         return jsonify({"error": "Không nhận được file nào!"}), 400
 
@@ -40,44 +40,86 @@ def upload_files():
     if len(files) < 2 or len(files) > 5:
         return jsonify({"error": "Vui lòng chọn từ 2 đến 5 file!"}), 400
 
-    file_data = []
-    file_paths = []
+    # ✅ Xóa toàn bộ file cũ trước khi lưu file mới
+    for file in os.listdir(UPLOAD_FOLDER):
+        file_path = os.path.join(UPLOAD_FOLDER, file)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
 
+    file_paths = []
     for file in files:
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(file_path)
         file_paths.append(file_path)
 
-        df = pd.read_excel(file_path, dtype=str).fillna("")
-        file_data.append({"filename": file.filename, "data": df.to_dict(orient="records")})
-
-    return jsonify({"files": file_data})
+    return jsonify({"message": "Tải lên thành công!", "files": [file.filename for file in files]})
 
 @app.route('/get_data')
 def get_data():
-    """Trả về dữ liệu từ file đã tải lên"""
-    file_paths = [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".xlsx")]
+    """Trả về dữ liệu từ file mới nhất đã tải lên"""
+    file_paths = sorted(
+        [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".xlsx")],
+        key=os.path.getctime, reverse=True
+    )
+
+    print("📂 Danh sách file trong thư mục uploads:", file_paths)
 
     if len(file_paths) < 2:
         return jsonify({"error": "Không đủ file để hiển thị!"}), 400
 
-    dfs = [pd.read_excel(path, dtype=str).fillna("") for path in file_paths]
+    dfs = [pd.read_excel(file_paths[0], dtype=str).fillna(""), pd.read_excel(file_paths[1], dtype=str).fillna("")]
+
+    print("📂 Đang gửi về 2 file mới nhất:", os.path.basename(file_paths[0]), os.path.basename(file_paths[1]))
 
     return jsonify({
         "file1": dfs[0].to_dict(orient="records"),
-        "file2": dfs[1].to_dict(orient="records")
+        "file2": dfs[1].to_dict(orient="records"),
+        "file1_name": os.path.basename(file_paths[0]),
+        "file2_name": os.path.basename(file_paths[1])
     })
+
+
+
+# @app.route('/compare')
+# def compare():
+#     """API so sánh dữ liệu từ 2 file Excel"""
+#     file_paths = [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".xlsx")]
+
+#     if len(file_paths) < 2:
+#         return jsonify({"error": "Không đủ file để so sánh!"}), 400
+
+#     df1 = pd.read_excel(file_paths[0], dtype=str).fillna("")
+#     df2 = pd.read_excel(file_paths[1], dtype=str).fillna("")
+
+#     merged_df = df1.merge(df2, on="MSSV", suffixes=('_file1', '_file2'), how="outer", indicator=True)
+
+#     errors = merged_df[
+#         (merged_df['_merge'] != 'both') |
+#         (merged_df['HOTEN_file1'] != merged_df['HOTEN_file2']) |
+#         (merged_df['LOP_file1'] != merged_df['LOP_file2'])
+#     ].drop(columns=['_merge'])
+
+#     errors = errors.fillna("N/A")
+
+#     return jsonify(errors.to_dict(orient="records"))
 
 @app.route('/compare')
 def compare():
     """API so sánh dữ liệu từ 2 file Excel"""
-    file_paths = [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".xlsx")]
+    file_paths = sorted(
+        [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".xlsx")],
+        key=os.path.getctime, reverse=True
+    )
 
     if len(file_paths) < 2:
         return jsonify({"error": "Không đủ file để so sánh!"}), 400
 
-    df1 = pd.read_excel(file_paths[0], dtype=str).fillna("")
-    df2 = pd.read_excel(file_paths[1], dtype=str).fillna("")
+    # ✅ Lấy đúng 2 file mới nhất
+    file1_path, file2_path = file_paths[:2]
+
+
+    df1 = pd.read_excel(file1_path, dtype=str).fillna("")
+    df2 = pd.read_excel(file2_path, dtype=str).fillna("")
 
     merged_df = df1.merge(df2, on="MSSV", suffixes=('_file1', '_file2'), how="outer", indicator=True)
 
@@ -89,7 +131,12 @@ def compare():
 
     errors = errors.fillna("N/A")
 
-    return jsonify(errors.to_dict(orient="records"))
+    return jsonify({
+        "errors": errors.to_dict(orient="records"),
+        "file1_name": os.path.basename(file1_path),
+        "file2_name": os.path.basename(file2_path)
+    })
+
 
 # @app.route('/get_data')
 # def get_data():
@@ -123,8 +170,8 @@ def compare():
 
 
 
-# if __name__ == '__main__':
-#     app.run(debug=True, host="0.0.0.0", port=5000)
-    
 if __name__ == '__main__':
-    app.run(debug=False, host="0.0.0.0", port=10000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
+    
+# if __name__ == '__main__':
+#     app.run(debug=False, host="0.0.0.0", port=10000)
