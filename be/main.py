@@ -1,6 +1,7 @@
-from flask import Flask, send_from_directory, jsonify, request, render_template
+from flask import Flask, send_from_directory, send_file, jsonify, request, render_template
 import pandas as pd
 import os
+import io
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -101,6 +102,41 @@ def get_data():
 
 #     return jsonify(errors.to_dict(orient="records"))
 
+# @app.route('/compare')
+# def compare():
+#     """API so sánh dữ liệu từ 2 file Excel"""
+#     file_paths = sorted(
+#         [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER) if f.endswith(".xlsx")],
+#         key=os.path.getctime, reverse=True
+#     )
+
+#     if len(file_paths) < 2:
+#         return jsonify({"error": "Không đủ file để so sánh!"}), 400
+
+#     # ✅ Lấy đúng 2 file mới nhất
+#     file1_path, file2_path = file_paths[:2]
+
+
+#     df1 = pd.read_excel(file1_path, dtype=str).fillna("")
+#     df2 = pd.read_excel(file2_path, dtype=str).fillna("")
+
+#     merged_df = df1.merge(df2, on="MSSV", suffixes=('_file1', '_file2'), how="outer", indicator=True)
+
+#     errors = merged_df[
+#         (merged_df['_merge'] != 'both') |
+#         (merged_df['HOTEN_file1'] != merged_df['HOTEN_file2']) |
+#         (merged_df['LOP_file1'] != merged_df['LOP_file2'])
+#     ].drop(columns=['_merge'])
+
+#     errors = errors.fillna("N/A")
+
+#     return jsonify({
+#         "errors": errors.to_dict(orient="records"),
+#         "file1_name": os.path.basename(file1_path),
+#         "file2_name": os.path.basename(file2_path)
+#     })
+    
+    
 @app.route('/compare')
 def compare():
     """API so sánh dữ liệu từ 2 file Excel"""
@@ -112,9 +148,8 @@ def compare():
     if len(file_paths) < 2:
         return jsonify({"error": "Không đủ file để so sánh!"}), 400
 
-    # ✅ Lấy đúng 2 file mới nhất
+    # Lấy 2 file mới nhất
     file1_path, file2_path = file_paths[:2]
-
 
     df1 = pd.read_excel(file1_path, dtype=str).fillna("")
     df2 = pd.read_excel(file2_path, dtype=str).fillna("")
@@ -134,6 +169,48 @@ def compare():
         "file1_name": os.path.basename(file1_path),
         "file2_name": os.path.basename(file2_path)
     })
+
+
+@app.route('/download', methods=['POST'])
+def download_comparison():
+    """Tải xuống file Excel chứa kết quả so sánh đã được gửi từ frontend"""
+
+    # Lấy dữ liệu đã gửi từ frontend
+    data = request.json
+
+    # Kiểm tra nếu dữ liệu có lỗi
+    if not data or "errors" not in data:
+        return jsonify({"error": "Không có dữ liệu để tải xuống!"}), 400
+
+    # Kiểm tra nếu dữ liệu không hợp lệ
+    if not data or "errors" not in data or "file1_name" not in data or "file2_name" not in data:
+        return jsonify({"error": "Dữ liệu không hợp lệ!"}), 400
+    
+    errors = data["errors"]
+    file1_name = data["file1_name"]
+    file2_name = data["file2_name"]
+    
+    # Chuyển dữ liệu sang DataFrame
+    df = pd.DataFrame(errors)
+
+# Sửa tên các cột để hiển thị tên file tương ứng
+    df = df.rename(columns={
+        'HOTEN_file1': f'Họ Tên ({data["file1_name"]})',
+        'LOP_file1': f'Lớp ({data["file1_name"]})',
+        'HOTEN_file2': f'Họ Tên ({data["file2_name"]})',
+        'LOP_file2': f'Lớp ({data["file2_name"]})'
+    })
+    
+    # Tạo file Excel từ dữ liệu so sánh
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name="So Sánh")
+        # Không cần gọi writer.close() ở đây, pandas tự động đóng file sau khi thoát khỏi với
+
+    output.seek(0)
+
+    # Trả về file Excel cho người dùng
+    return send_file(output, as_attachment=True, download_name="ket_qua_so_sanh.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 # @app.route('/get_data')
