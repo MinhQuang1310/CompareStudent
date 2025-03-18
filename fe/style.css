@@ -58,3 +58,25 @@ footer a {
 footer a:hover {
     text-decoration: underline;
 }
+
+/* Đặt nút tải xuống ở phía bên phải */
+#download {
+    margin-left: auto;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    display: block; /* Để nút hiển thị theo dạng block */
+    padding: 10px 20px;
+    background-color: blue;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+}
+
+#download:hover {
+    background-color: darkblue;
+}
+
+button:hover {
+    background-color: darkblue;
+}
